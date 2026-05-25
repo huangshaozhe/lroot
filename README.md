@@ -116,3 +116,9 @@ See `.github/PULL_REQUEST_TEMPLATE.md` for the full checklist.
 
 Unlicense — public domain. See `LICENSE` or
 <https://unlicense.org/>.
+
+## Disclaimer
+
+This project is a general-purpose tool for running Linux binaries under an
+alternate root filesystem. The author is not responsible for how others use
+it. Use at your own risk.
