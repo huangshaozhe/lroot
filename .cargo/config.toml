@@ -1,0 +1,13 @@
+# Build configuration for musl target.
+# Requires musl libc libraries in /tmp/musl-sysroot/lib/:
+#   libc.musl-x86_64.so.1  (from Alpine rootfs or musl distribution)
+#   libc.so                (symlink → libc.musl-x86_64.so.1)
+#   libgcc_s.so            (stub providing _Unwind_* symbols)
+# See build-all.sh target "64-musl" for setup instructions.
+[target.x86_64-unknown-linux-musl]
+linker = "rust-lld"
+rustflags = [
+    "-C", "target-feature=-crt-static",
+    "-C", "link-self-contained=no",
+    "-C", "link-args=-L/tmp/musl-sysroot/lib",
+]
