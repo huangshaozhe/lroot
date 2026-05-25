@@ -100,8 +100,9 @@ Cross-compilation targets require additional toolchains (see `build-all.sh`):
 
 ## Contributing
 
-Contributions welcome! I'm currently busy with exams, so PRs may take a
-while to review — please be patient.
+Contributions welcome! I'm currently preparing for high school entrance
+exams and will be unavailable until mid-July. PRs will be reviewed after
+that — please be patient.
 
 **Before submitting:**
 - `cargo test -p lroot` and `cargo test -p lroot-distro` must pass
