@@ -90,8 +90,13 @@ fn is_root_id() -> bool {
     })
 }
 
-// newfstatat on x86_64, fstatat64 on aarch64/arm/x86 (i686)
-#[cfg(any(target_arch = "aarch64", target_arch = "arm", target_arch = "x86"))]
+// newfstatat on x86_64, fstatat64 on arm/x86 (i686), fstatat=79 on aarch64
+#[cfg(all(target_arch = "aarch64", not(target_os = "android")))]
+const SYS_FSTATAT: libc::c_long = libc::SYS_newfstatat as libc::c_long;
+// Android aarch64 libc doesn't export SYS_newfstatat
+#[cfg(all(target_arch = "aarch64", target_os = "android"))]
+const SYS_FSTATAT: libc::c_long = 79;
+#[cfg(any(target_arch = "arm", target_arch = "x86"))]
 const SYS_FSTATAT: libc::c_long = libc::SYS_fstatat64 as libc::c_long;
 #[cfg(not(any(target_arch = "aarch64", target_arch = "arm", target_arch = "x86")))]
 const SYS_FSTATAT: libc::c_long = libc::SYS_newfstatat as libc::c_long;
@@ -577,9 +582,9 @@ fn make_fake_fd(content: &[u8]) -> i32 {
     }
 }
 
-unsafe fn read_cstring(buf: &[i8]) -> &[u8] {
+unsafe fn read_cstring(buf: &[u8]) -> &[u8] {
     let len = buf.iter().position(|&c| c == 0).unwrap_or(buf.len());
-    std::slice::from_raw_parts(buf.as_ptr() as *const u8, len)
+    &buf[..len]
 }
 
 fn fake_proc_version() -> i32 {
@@ -593,7 +598,9 @@ fn fake_proc_version() -> i32 {
                 let len = libc::strlen(k);
                 std::slice::from_raw_parts(k as *const u8, len)
             } else {
-                read_cstring(&utsname.release)
+                read_cstring(unsafe {
+                    &*(&utsname.release as *const [c_char; 65] as *const [u8; 65])
+                })
             }
         };
 
@@ -1088,7 +1095,6 @@ pub extern "C" fn lstat(path: *const c_char, buf: *mut libc::stat) -> libc::c_in
     unsafe { libc::syscall(SYS_FSTATAT, libc::AT_FDCWD as i64, translate(path), buf as *mut libc::c_void, libc::AT_SYMLINK_NOFOLLOW as i64) as libc::c_int }
 }
 
-#[no_mangle]
 #[cfg(not(target_env = "musl"))]
 type Statx = libc::statx;
 #[cfg(target_env = "musl")]
@@ -1615,7 +1621,13 @@ pub extern "C" fn symlinkat(
 
 #[no_mangle]
 pub extern "C" fn truncate(path: *const c_char, length: libc::off_t) -> libc::c_int {
-    unsafe { libc::syscall(libc::SYS_truncate, translate(path), length as i64) as libc::c_int }
+    unsafe {
+        #[cfg(target_os = "android")]
+        let sysno = 45;
+        #[cfg(not(target_os = "android"))]
+        let sysno = libc::SYS_truncate;
+        libc::syscall(sysno, translate(path), length as i64) as libc::c_int
+    }
 }
 
 #[no_mangle]
@@ -1693,7 +1705,13 @@ pub extern "C" fn fchownat(
 
 #[no_mangle]
 pub extern "C" fn statfs(path: *const c_char, buf: *mut libc::statfs) -> libc::c_int {
-    unsafe { libc::syscall(libc::SYS_statfs, translate(path), buf as i64) as libc::c_int }
+    unsafe {
+        #[cfg(target_os = "android")]
+        let sysno = 44;
+        #[cfg(not(target_os = "android"))]
+        let sysno = libc::SYS_statfs;
+        libc::syscall(sysno, translate(path), buf as i64) as libc::c_int
+    }
 }
 
 // ── capget hook ─────────────────────────────────────────────────────────────
@@ -2794,7 +2812,11 @@ fn ptrace_fallback_execve(
 
 macro_rules! eperm {
     () => {
-        unsafe { *libc::__errno_location() = libc::EPERM; -1 }
+        unsafe {
+            #[cfg(target_os = "android")] { *libc::__errno() = libc::EPERM; }
+            #[cfg(not(target_os = "android"))] { *libc::__errno_location() = libc::EPERM; }
+            -1
+        }
     };
 }
 

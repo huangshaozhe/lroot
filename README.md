@@ -98,6 +98,19 @@ Cross-compilation targets require additional toolchains (see `build-all.sh`):
 - **x86_64-musl**: `rustup target add x86_64-unknown-linux-musl` + musl-tools
 - **aarch64-glibc**: `rustup target add aarch64-unknown-linux-gnu` + cross-gcc
 
+## Contributing
+
+Contributions welcome! I'm currently busy with exams, so PRs may take a
+while to review — please be patient.
+
+**Before submitting:**
+- `cargo test -p lroot` and `cargo test -p lroot-distro` must pass
+- All hooks must use `libc::syscall(SYS_*)` (no PLT calls)
+- Android-specific code needs `#[cfg(target_os = "android")]`
+- Follow existing code style (no added comments, concise)
+
+See `.github/PULL_REQUEST_TEMPLATE.md` for the full checklist.
+
 ## License
 
 Unlicense — public domain. See `LICENSE` or

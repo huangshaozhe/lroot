@@ -11,3 +11,7 @@ rustflags = [
     "-C", "link-self-contained=no",
     "-C", "link-args=-L/tmp/musl-sysroot/lib",
 ]
+
+[target.aarch64-unknown-linux-musl]
+linker = "rust-lld"
+rustflags = ["-C", "target-feature=+crt-static"]

@@ -72,10 +72,14 @@ fn variant_name(class: u8, interp: &str) -> &'static str {
 fn find_intercept(variant: &str) -> Option<PathBuf> {
     let name = format!("libintercept-{variant}.so");
     let search = |n: &str| -> Option<PathBuf> {
-        let paths = [
+        let prefix = std::env::var("PREFIX").ok();
+        let mut paths = vec![
             format!("/usr/lib/{n}"),
             format!("/usr/local/lib/{n}"),
         ];
+        if let Some(ref p) = prefix {
+            paths.push(format!("{p}/lib/{n}"));
+        }
         for p in &paths {
             let pb = PathBuf::from(p);
             if pb.exists() {

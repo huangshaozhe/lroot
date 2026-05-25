@@ -3,7 +3,7 @@ mod distro;
 use distro::{data_dir, distro_dir, find, DISTROS};
 use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::process;
+use std::process::{self, Command};
 
 fn print_help() {
     eprintln!(
@@ -141,21 +141,22 @@ fn main() {
 }
 
 fn download(url: &str) -> Vec<u8> {
-    let resp = reqwest::blocking::get(url).unwrap_or_else(|e| {
-        eprintln!("download failed: {e}");
-        process::exit(1);
-    });
-    let status = resp.status();
-    if !status.is_success() {
-        eprintln!("download returned {status}");
+    let out = Command::new("curl")
+        .args(["-sSL", url])
+        .output()
+        .unwrap_or_else(|e| {
+            eprintln!("failed to run curl: {e}");
+            eprintln!("install curl: pkg install curl  (Termux)");
+            eprintln!("            apt install curl  (Debian)");
+            eprintln!("            apk add curl      (Alpine)");
+            process::exit(1);
+        });
+    if !out.status.success() {
+        let msg = String::from_utf8_lossy(&out.stderr);
+        eprintln!("curl failed: {msg}");
         process::exit(1);
     }
-    resp.bytes()
-        .unwrap_or_else(|e| {
-            eprintln!("read response failed: {e}");
-            process::exit(1);
-        })
-        .to_vec()
+    out.stdout
 }
 
 fn extract_tarball(data: &[u8], dest: &Path) {
